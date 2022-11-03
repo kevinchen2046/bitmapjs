@@ -1,0 +1,21 @@
+{
+  "name": "bitmap",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@types/node": "^18.11.9",
+    "@types/pngjs": "^6.0.1",
+    "colors": "^1.4.0",
+    "gifuct-js": "^2.1.2",
+    "jpeg-js": "^0.4.4",
+    "node-object-hash": "^2.3.10",
+    "pngjs": "^6.0.0"
+  }
+}
