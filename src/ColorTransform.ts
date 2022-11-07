@@ -1,4 +1,7 @@
 'use strict';
+
+import { IColor } from "./Color";
+
 export class ColorTransform {
 	public redMultiplier: number;
 	public greenMultiplier: number;
@@ -21,6 +24,14 @@ export class ColorTransform {
 		this.greenOffset = greenOffset || 0;
 		this.blueOffset = blueOffset || 0;
 		this.alphaOffset = alphaOffset || 0;
+	}
+
+	exec<T extends IColor>(pixel: T):T {
+		pixel.r = Math.max(0,Math.min(255,pixel.r * this.redMultiplier + this.redOffset));
+		pixel.g = Math.max(0,Math.min(255,pixel.g * this.greenMultiplier + this.greenOffset));
+		pixel.b = Math.max(0,Math.min(255,pixel.b * this.blueMultiplier + this.blueOffset));
+		pixel.a = Math.max(0,Math.min(255,pixel.a * this.alphaMultiplier + this.alphaOffset));
+		return pixel;
 	}
 }
 

@@ -19,7 +19,6 @@ const hash = require("node-object-hash");
 const Color_1 = require("./Color");
 const Util_1 = require("./Util");
 const Rectangle_1 = require("./Rectangle");
-const ColorTransform_1 = require("./ColorTransform");
 const BlendMode_1 = require("./BlendMode");
 const BitmapChannel_1 = require("./BitmapChannel");
 const PRNG_1 = require("./PRNG");
@@ -63,6 +62,19 @@ class Bitmap extends pngjs_1.PNG {
                     break;
             }
             return result;
+        });
+    }
+    /**
+     * 从base64加载图像
+     * @param source
+     * @param {String} source
+     * @returns {Promise<Bitmap>}
+     */
+    static fromBase64(source) {
+        return __awaiter(this, void 0, void 0, function* () {
+            let bitmap = new Bitmap(1, 1);
+            yield bitmap.fromBase64(source);
+            return bitmap;
         });
     }
     /**
@@ -187,6 +199,7 @@ class Bitmap extends pngjs_1.PNG {
         this.data[idx + 1] = color.g;
         this.data[idx + 2] = color.b;
         this.data[idx + 3] = color.a;
+        return this;
     }
     /**
      * 获取指定像素颜色值
@@ -222,6 +235,7 @@ class Bitmap extends pngjs_1.PNG {
         this.data[idx + 1] = color.g;
         this.data[idx + 2] = color.b;
         this.data[idx + 3] = color.a;
+        return this;
     }
     /**
      * 像素遍历
@@ -236,6 +250,7 @@ class Bitmap extends pngjs_1.PNG {
                 color.recorver();
             }
         }
+        return this;
     }
     /**
      * 像素遍历
@@ -250,6 +265,61 @@ class Bitmap extends pngjs_1.PNG {
                 color.recorver();
             }
         }
+        return this;
+    }
+    /**
+     * 像素按照方向遍历
+     * - method return true 中断遍历
+     * @param {function(color: Color, x: number, y: number):void} method
+     */
+    forEachPixelsByDirect(method, direct = 'top') {
+        switch (direct) {
+            case 'top':
+                {
+                    aa: for (let y = 0; y < this.height; y++) {
+                        for (let x = 0; x < this.width; x++) {
+                            if (method(x, y)) {
+                                break aa;
+                            }
+                        }
+                    }
+                }
+                break;
+            case 'bottom':
+                {
+                    dd: for (let y = this.height - 1; y >= 0; y--) {
+                        for (let x = 0; x < this.width; x++) {
+                            if (method(x, y)) {
+                                break dd;
+                            }
+                        }
+                    }
+                }
+                break;
+            case 'left':
+                {
+                    bb: for (let x = 0; x < this.width; x++) {
+                        for (let y = 0; y < this.height; y++) {
+                            if (method(x, y)) {
+                                break bb;
+                            }
+                        }
+                    }
+                }
+                break;
+            case 'right':
+                {
+                    cc: for (let x = this.width - 1; x >= 0; x--) {
+                        for (let y = 0; y < this.height; y++) {
+                            if (method(x, y)) {
+                                break cc;
+                            }
+                        }
+                    }
+                }
+                break;
+        }
+        return this;
     }
     /**
      * 清楚像素所有颜色
@@ -286,10 +356,6 @@ class Bitmap extends pngjs_1.PNG {
      * @return {Rectangle} 指定颜色的图像区域。
      */
     getColorBoundsRect(mask, color, findColor = true) {
-        let rect = this.rect;
-        let data = this.data;
-        let xMax = rect.width;
-        let yMax = rect.height;
         let maskargb = ColorUtil_1.ColorUtil.extract32(mask);
         function test(argb) {
             let a = argb.a & maskargb.a;
@@ -299,85 +365,35 @@ class Bitmap extends pngjs_1.PNG {
             let s = ColorUtil_1.ColorUtil.merge32(a, r, g, b);
             return findColor ? (s | color) : !(s | color);
         }
-        function forEach(method, direct = 'top') {
-            switch (direct) {
-                case 'top':
-                    {
-                        aa: for (let y = 0; y < yMax; y++) {
-                            for (let x = 0; x < xMax; x++) {
-                                if (method(x, y)) {
-                                    break aa;
-                                }
-                            }
-                        }
-                    }
-                    break;
-                case 'bottom':
-                    {
-                        dd: for (let y = yMax - 1; y >= 0; y--) {
-                            for (let x = 0; x < xMax; x++) {
-                                if (method(x, y)) {
-                                    break dd;
-                                }
-                            }
-                        }
-                    }
-                    break;
-                case 'left':
-                    {
-                        bb: for (let x = 0; x < xMax; x++) {
-                            for (let y = 0; y < yMax; y++) {
-                                if (method(x, y)) {
-                                    break bb;
-                                }
-                            }
-                        }
-                    }
-                    break;
-                case 'right':
-                    {
-                        cc: for (let x = xMax - 1; x >= 0; x--) {
-                            for (let y = 0; y < yMax; y++) {
-                                if (method(x, y)) {
-                                    break cc;
-                                }
-                            }
-                        }
-                    }
-                    break;
-            }
-        }
-        function getPixel32RGB(x, y) {
-            let i = (x + y * xMax) * 4;
-            return { r: data[i + 0], g: data[i + 1], b: data[i + 2], a: data[i + 3] };
-        }
+        let getPixel32 = this.getPixel32;
+        let forEachDirect = this.forEachPixelsByDirect;
         let top = 0;
         let right = 0;
         let left = 0;
         let bottom = 0;
-        forEach((x, y) => {
-            if (test(getPixel32RGB(x, y))) {
+        forEachDirect((x, y) => {
+            if (test(getPixel32(x, y))) {
                 top = y;
                 return true;
             }
             return false;
         }, 'top');
-        forEach((x, y) => {
-            if (test(getPixel32RGB(x, y))) {
+        forEachDirect((x, y) => {
+            if (test(getPixel32(x, y))) {
                 left = x;
                 return true;
             }
             return false;
         }, 'left');
-        forEach((x, y) => {
-            if (test(getPixel32RGB(x, y))) {
+        forEachDirect((x, y) => {
+            if (test(getPixel32(x, y))) {
                 right = x;
                 return true;
             }
             return false;
         }, 'right');
-        forEach((x, y) => {
-            if (test(getPixel32RGB(x, y))) {
+        forEachDirect((x, y) => {
+            if (test(getPixel32(x, y))) {
                 bottom = y;
                 return true;
             }
@@ -388,26 +404,15 @@ class Bitmap extends pngjs_1.PNG {
     /**
      * 颜色变换
      * @param {Rectangle} rect 需要处理的区域
-     * @param {ColorTransform} colorTransform 变换值
+     * @param {ColorTransform} transform 变换值
      */
-    colorTransform(rect, colorTransform) {
-        rect = rect || this.rect;
-        colorTransform = colorTransform || new ColorTransform_1.ColorTransform();
-        let data = this.data;
-        let xMax = rect.x + rect.height;
-        let yMax = rect.y + rect.height;
-        for (let y = rect.y; y < yMax; y++) {
-            for (let x = rect.x; x < xMax; x++) {
-                let r = (y * this.width + x) * 4;
-                let g = r + 1;
-                let b = r + 2;
-                let a = r + 3;
-                data[r] = data[r] * colorTransform.redMultiplier + colorTransform.redOffset;
-                data[g] = data[g] * colorTransform.greenMultiplier + colorTransform.greenOffset;
-                data[b] = data[b] * colorTransform.blueMultiplier + colorTransform.blueOffset;
-                data[a] = data[a] * colorTransform.alphaMultiplier + colorTransform.alphaOffset;
-            }
-        }
+    colorTransform(transform, rect, dest) {
+        rect = rect !== null && rect !== void 0 ? rect : this.rect;
+        dest = dest !== null && dest !== void 0 ? dest : Point_1.Point.EMPTY;
+        this.forEachPixelsByRect(rect, (color, x, y) => {
+            this.setPixel32(x + dest.x, y + dest.y, transform.exec(color));
+        });
+        return this;
     }
     /**
      * 颜色矩阵
@@ -421,6 +426,7 @@ class Bitmap extends pngjs_1.PNG {
         this.forEachPixelsByRect(rect, (color, x, y) => {
             this.setPixel32(x + dest.x, y + dest.y, maxtrix.exec(color));
         });
+        return this;
     }
     /**
      * 对两个位图数据进行比较。
@@ -454,7 +460,6 @@ class Bitmap extends pngjs_1.PNG {
         }
         return result;
     }
-    ;
     /**
      * 复制通道
      * @param {Bitmap} source 源图像
@@ -508,56 +513,43 @@ class Bitmap extends pngjs_1.PNG {
                 this.setPixel32(destPoint.x + x, destPoint.y + y, color);
             }
         }
+        return this;
     }
-    ;
     /**
      * 复制图像
-     * @param source 源
-     * @param sourceRect 源矩形
-     * @param destPoint 偏移
-     * @param alphaBitmap
-     * @param alphaPoint
-     * @param mergeAlpha
+     * @param {Bitmap} source 源
+     * @param {Rectangle} sourceRect 源矩形
+     * @param {Point} destPoint 偏移
+     * @param {Bitmap} alphaBitmap Alpha通道信息源
+     * @param {Point} alphaPoint Alpha通道偏移
+     * @param {Boolean} mergeAlpha 是否合并Alpha通道
      */
     copyPixels(source, sourceRect, destPoint, alphaBitmap, alphaPoint, mergeAlpha) {
         if (!sourceRect)
             sourceRect = source.rect;
         if (!destPoint)
             destPoint = new Point_1.Point();
+        let execAlpha = !!alphaBitmap;
+        if (execAlpha) {
+            alphaPoint = alphaPoint !== null && alphaPoint !== void 0 ? alphaPoint : Point_1.Point.EMPTY;
+            if (mergeAlpha == undefined)
+                mergeAlpha = false;
+        }
         for (let y = sourceRect.top; y < sourceRect.bottom; y++) {
             for (let x = sourceRect.left; x < sourceRect.right; x++) {
                 let color = source.getPixel32(x, y);
                 if (!color)
                     continue;
+                if (execAlpha) {
+                    let alphaColor = alphaBitmap.getPixel32(x + alphaPoint.x, y + alphaPoint.y);
+                    if (alphaColor) {
+                        mergeAlpha ? color.a = Math.max(0, Math.min(255, color.a + alphaColor.a)) : color.a = alphaColor.a;
+                    }
+                }
                 this.setPixel32(x + destPoint.x, y + destPoint.y, color);
             }
         }
-    }
-    ;
-    /**
-     * 放置图像
-     * @param source 源图像
-     * @param sourceRect 源图像矩形
-     * @param destPoint 偏移点
-     * @param padding 间隙
-     * @param pixeledge 像素边缘扩展
-     */
-    putPixelsTo(source, sourceRect, destPoint, padding, pixeledge) {
-        let dstx = destPoint.x + padding;
-        let dsty = destPoint.y + padding;
-        let bottom = sourceRect.y + sourceRect.height + pixeledge * 2;
-        let right = sourceRect.x + sourceRect.width + pixeledge * 2;
-        for (let y = sourceRect.y; y < bottom; y++) {
-            // if (Math.abs(rect.y - y) < padding || Math.abs(rect.bottom - y) <= padding) continue;
-            let ty = Math.min(Math.max(sourceRect.y, y - pixeledge), sourceRect.y + sourceRect.height - 1);
-            // let ty = y;
-            for (let x = sourceRect.x; x < right; x++) {
-                // if (Math.abs(rect.x - x) < padding || Math.abs(rect.right - x) <= padding) continue;
-                let tx = Math.min(Math.max(sourceRect.x, x - pixeledge), sourceRect.x + sourceRect.width - 1);
-                // let tx = x;
-                this.setPixel32(x - sourceRect.x + dstx, y - sourceRect.y + dsty, source.getPixel32(tx, ty));
-            }
-        }
+        return this;
     }
     /**
      * 混合图像
@@ -567,6 +559,7 @@ class Bitmap extends pngjs_1.PNG {
      */
     blend(target, blendMode, dest) {
         BlendMode_1.blendModeApply.exec(this, target, blendMode, dest);
+        return this;
     }
     // /**
     //  * 绘制图像
@@ -593,6 +586,7 @@ class Bitmap extends pngjs_1.PNG {
                 this.setPixel32(x, y, color);
             }
         }
+        return this;
     }
     /**
      * 用指定颜色在指定坐标开始填充
@@ -609,6 +603,7 @@ class Bitmap extends pngjs_1.PNG {
                 this.setPixel32(x1, y1, color);
             }
         }
+        return this;
     }
     /**
      * 生成噪点
@@ -640,14 +635,12 @@ class Bitmap extends pngjs_1.PNG {
                     gray = (cr + cg + cb) / 3;
                     cr = cg = cb = gray;
                 }
-                data[pos + 0] = (channelOptions & redChannel) ? (1 * cr) :
-                    0x00;
-                data[pos + 1] = (channelOptions & greenChannel) ? (1 * cg) :
-                    0x00;
-                data[pos + 2] = (channelOptions & blueChannel) ? (1 * cb) :
-                    0x00;
+                data[pos + 0] = (channelOptions & redChannel) ? (1 * cr) : 0x00;
+                data[pos + 1] = (channelOptions & greenChannel) ? (1 * cg) : 0x00;
+                data[pos + 2] = (channelOptions & blueChannel) ? (1 * cb) : 0x00;
             }
         }
+        return this;
     }
     /**
      * 调色板
@@ -669,7 +662,7 @@ class Bitmap extends pngjs_1.PNG {
             (source.height - sourceRect.height - destPoint.y) :
             sourceRect.height;
         let sourceData = source.data;
-        let sourcePos, destPos, sourceHex;
+        let sourcePos;
         let r, g, b, a, pos;
         let sx = sourceRect.x;
         let sy = sourceRect.y;
@@ -700,6 +693,7 @@ class Bitmap extends pngjs_1.PNG {
                     data[pos + 3] = alphaArray[a];
             }
         }
+        return this;
     }
     /**
      * 图像颜色反转
@@ -713,7 +707,8 @@ class Bitmap extends pngjs_1.PNG {
             blurArr.push(0o0 << 24 | 0 << 16 | i << 8 | 0o0);
             greenArr.push(0o0 << 24 | 0 << 16 | 0 << 8 | i);
         }
-        this.paletteMap(this, this.rect, new Point_1.Point(), redArr, blurArr, greenArr);
+        this.paletteMap(this, this.rect, Point_1.Point.EMPTY, redArr, blurArr, greenArr);
+        return this;
     }
     /**
      * 柏林噪音
@@ -771,6 +766,7 @@ class Bitmap extends pngjs_1.PNG {
                 data[pos + 2] = cb;
             }
         }
+        return this;
     }
     /**
      * write file to disk
@@ -779,7 +775,7 @@ class Bitmap extends pngjs_1.PNG {
      */
     save(path) {
         return __awaiter(this, void 0, void 0, function* () {
-            return fs.writeFileSync(path, yield this.packToBuffer());
+            this.pack().pipe(fs.createWriteStream(path));
         });
     }
     /**
@@ -822,23 +818,19 @@ class Bitmap extends pngjs_1.PNG {
      */
     toBase64() {
         return __awaiter(this, void 0, void 0, function* () {
-            return Util_1.Util.encodeBase64Image(yield this.packToBuffer());
+            return Util_1.Util.encodeBase64Image(yield this.getBuffer());
         });
     }
     /**
      * 打包成Buffer
      * @returns
      */
-    packToBuffer() {
+    getBuffer() {
         return new Promise(reslove => {
-            if (!!this.__bufffer) {
-                reslove(this.__bufffer);
-                return;
-            }
             let chunks = [];
             let size = 0;
             // 可写流实例
-            const myWritable = new stream_1.Writable({
+            const writable = new stream_1.Writable({
                 write(chunk, encoding, callback) {
                     chunks.push(chunk);
                     size += chunk.length;
@@ -848,12 +840,11 @@ class Bitmap extends pngjs_1.PNG {
             // myWritable.on('pipe',  ()=> {
             //     console.log("pipe");
             // })
-            myWritable.on('finish', () => {
+            writable.on('finish', () => {
                 // console.log("finish");
-                this.__bufffer = Buffer.concat(chunks, size);
-                reslove(this.__bufffer);
+                reslove(Buffer.concat(chunks, size));
             });
-            this.pack().pipe(myWritable);
+            this.pack().pipe(writable);
         });
     }
 }

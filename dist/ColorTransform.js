@@ -12,5 +12,12 @@ class ColorTransform {
         this.blueOffset = blueOffset || 0;
         this.alphaOffset = alphaOffset || 0;
     }
+    exec(pixel) {
+        pixel.r = Math.max(0, Math.min(255, pixel.r * this.redMultiplier + this.redOffset));
+        pixel.g = Math.max(0, Math.min(255, pixel.g * this.greenMultiplier + this.greenOffset));
+        pixel.b = Math.max(0, Math.min(255, pixel.b * this.blueMultiplier + this.blueOffset));
+        pixel.a = Math.max(0, Math.min(255, pixel.a * this.alphaMultiplier + this.alphaOffset));
+        return pixel;
+    }
 }
 exports.ColorTransform = ColorTransform;

@@ -19,7 +19,7 @@ async function exec() {
     //bitmap3.perlinNoise(4,4,10,7,true);
     // console.log(bitmap3.getPixel(10, 10).toHex())
     // bitmap3.blend(bitmap2,BlendMode.LIGHTEN);
-    bitmap3.colorMatrix(ColorMatrix.black);
+    bitmap3.colorMatrix(ColorMatrix.gray);
     // bitmap3.copyChannel(bitmap2, BitmapChannel.RED, BitmapChannel.ALPHA);
     await bitmap3.save("./test/out.png");
     // Util.exportToHTML(`./test/out.html`, bitmap1, bitmap2, bitmap3);

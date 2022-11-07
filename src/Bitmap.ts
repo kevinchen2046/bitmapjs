@@ -61,6 +61,18 @@ export class Bitmap extends PNG {
     }
 
     /**
+     * 从base64加载图像
+     * @param source 
+     * @param {String} source 
+     * @returns {Promise<Bitmap>}
+     */
+    static async fromBase64(source: string) {
+        let bitmap = new Bitmap(1, 1);
+        await bitmap.fromBase64(source);
+        return bitmap;
+    }
+
+    /**
      * 加载PNG
      * @param url 
      * @returns 
@@ -186,6 +198,7 @@ export class Bitmap extends PNG {
         this.data[idx + 1] = color.g;
         this.data[idx + 2] = color.b;
         this.data[idx + 3] = color.a;
+        return this;
     }
 
     /**
@@ -221,6 +234,7 @@ export class Bitmap extends PNG {
         this.data[idx + 1] = color.g;
         this.data[idx + 2] = color.b;
         this.data[idx + 3] = color.a;
+        return this;
     }
 
     /**
@@ -236,6 +250,7 @@ export class Bitmap extends PNG {
                 color.recorver();
             }
         }
+        return this;
     }
     /**
      * 像素遍历
@@ -250,6 +265,58 @@ export class Bitmap extends PNG {
                 color.recorver();
             }
         }
+        return this;
+    }
+
+    /**
+     * 像素按照方向遍历
+     * - method return true 中断遍历
+     * @param {function(color: Color, x: number, y: number):void} method 
+     */
+    forEachPixelsByDirect(method: (x: number, y: number) => boolean, direct: 'top' | 'bottom' | 'left' | 'right' = 'top') {
+        switch (direct) {
+            case 'top': {
+                aa:
+                for (let y = 0; y < this.height; y++) {
+                    for (let x = 0; x < this.width; x++) {
+                        if (method(x, y)) {
+                            break aa;
+                        }
+                    }
+                }
+            } break;
+            case 'bottom': {
+                dd:
+                for (let y = this.height - 1; y >= 0; y--) {
+                    for (let x = 0; x < this.width; x++) {
+                        if (method(x, y)) {
+                            break dd;
+                        }
+                    }
+                }
+            } break;
+            case 'left': {
+                bb:
+                for (let x = 0; x < this.width; x++) {
+                    for (let y = 0; y < this.height; y++) {
+                        if (method(x, y)) {
+                            break bb;
+                        }
+                    }
+                }
+            } break;
+            case 'right': {
+                cc:
+                for (let x = this.width - 1; x >= 0; x--) {
+                    for (let y = 0; y < this.height; y++) {
+                        if (method(x, y)) {
+                            break cc;
+                        }
+                    }
+                }
+            } break;
+        }
+        return this;
     }
     /**
      * 清楚像素所有颜色
@@ -288,12 +355,7 @@ export class Bitmap extends PNG {
      * @return {Rectangle} 指定颜色的图像区域。
      */
     getColorBoundsRect(mask: number, color: number, findColor = true) {
-        let rect = this.rect;
-        let data = this.data;
-        let xMax = rect.width;
-        let yMax = rect.height;
         let maskargb: IColor = ColorUtil.extract32(mask);
-
         function test(argb) {
             let a = argb.a & maskargb.a;
             let r = argb.r & maskargb.r;
@@ -302,83 +364,35 @@ export class Bitmap extends PNG {
             let s = ColorUtil.merge32(a, r, g, b);
             return findColor ? (s | color) : !(s | color);
         }
-
-        function forEach(method, direct = 'top') {
-            switch (direct) {
-                case 'top': {
-                    aa:
-                    for (let y = 0; y < yMax; y++) {
-                        for (let x = 0; x < xMax; x++) {
-                            if (method(x, y)) {
-                                break aa;
-                            }
-                        }
-                    }
-                } break;
-                case 'bottom': {
-                    dd:
-                    for (let y = yMax - 1; y >= 0; y--) {
-                        for (let x = 0; x < xMax; x++) {
-                            if (method(x, y)) {
-                                break dd;
-                            }
-                        }
-                    }
-                } break;
-                case 'left': {
-                    bb:
-                    for (let x = 0; x < xMax; x++) {
-                        for (let y = 0; y < yMax; y++) {
-                            if (method(x, y)) {
-                                break bb;
-                            }
-                        }
-                    }
-                } break;
-                case 'right': {
-                    cc:
-                    for (let x = xMax - 1; x >= 0; x--) {
-                        for (let y = 0; y < yMax; y++) {
-                            if (method(x, y)) {
-                                break cc;
-                            }
-                        }
-                    }
-                } break;
-            }
-        }
-
-        function getPixel32RGB(x, y) {
-            let i = (x + y * xMax) * 4;
-            return { r: data[i + 0], g: data[i + 1], b: data[i + 2], a: data[i + 3] };
-        }
+        let getPixel32 = this.getPixel32;
+        let forEachDirect = this.forEachPixelsByDirect;
         let top = 0;
         let right = 0;
         let left = 0;
         let bottom = 0;
-        forEach((x, y) => {
-            if (test(getPixel32RGB(x, y))) {
+        forEachDirect((x, y) => {
+            if (test(getPixel32(x, y))) {
                 top = y;
                 return true;
             }
             return false;
         }, 'top')
-        forEach((x, y) => {
-            if (test(getPixel32RGB(x, y))) {
+        forEachDirect((x, y) => {
+            if (test(getPixel32(x, y))) {
                 left = x;
                 return true;
             }
             return false;
         }, 'left')
-        forEach((x, y) => {
-            if (test(getPixel32RGB(x, y))) {
+        forEachDirect((x, y) => {
+            if (test(getPixel32(x, y))) {
                 right = x;
                 return true;
             }
             return false;
         }, 'right')
-        forEach((x, y) => {
-            if (test(getPixel32RGB(x, y))) {
+        forEachDirect((x, y) => {
+            if (test(getPixel32(x, y))) {
                 bottom = y
                 return true;
             }
@@ -390,29 +404,15 @@ export class Bitmap extends PNG {
     /**
      * 颜色变换
      * @param {Rectangle} rect 需要处理的区域
-     * @param {ColorTransform} colorTransform 变换值
+     * @param {ColorTransform} transform 变换值
      */
-    colorTransform(rect: Rectangle, colorTransform: ColorTransform) {
-        rect = rect || this.rect;
-        colorTransform = colorTransform || new ColorTransform();
-
-        let data = this.data;
-        let xMax = rect.x + rect.height;
-        let yMax = rect.y + rect.height;
-
-        for (let y = rect.y; y < yMax; y++) {
-            for (let x = rect.x; x < xMax; x++) {
-                let r = (y * this.width + x) * 4;
-                let g = r + 1;
-                let b = r + 2;
-                let a = r + 3;
-
-                data[r] = data[r] * colorTransform.redMultiplier + colorTransform.redOffset;
-                data[g] = data[g] * colorTransform.greenMultiplier + colorTransform.greenOffset;
-                data[b] = data[b] * colorTransform.blueMultiplier + colorTransform.blueOffset;
-                data[a] = data[a] * colorTransform.alphaMultiplier + colorTransform.alphaOffset;
-            }
-        }
+    colorTransform(transform: ColorTransform, rect?: Rectangle, dest?: Point) {
+        rect = rect ?? this.rect;
+        dest = dest ?? Point.EMPTY;
+        this.forEachPixelsByRect(rect, (color, x, y) => {
+            this.setPixel32(x + dest.x, y + dest.y, transform.exec(color));
+        });
+        return this;
     }
 
     /**
@@ -427,6 +427,7 @@ export class Bitmap extends PNG {
         this.forEachPixelsByRect(rect, (color, x, y) => {
             this.setPixel32(x + dest.x, y + dest.y, maxtrix.exec(color));
         });
+        return this;
     }
 
     /**
@@ -464,7 +465,7 @@ export class Bitmap extends PNG {
             }
         }
         return result;
-    };
+    }
 
     /**
      * 复制通道
@@ -501,56 +502,40 @@ export class Bitmap extends PNG {
                 this.setPixel32(destPoint.x + x, destPoint.y + y, color);
             }
         }
-    };
+        return this;
+    }
 
     /**
      * 复制图像
-     * @param source 源
-     * @param sourceRect 源矩形
-     * @param destPoint 偏移
-     * @param alphaBitmap 
-     * @param alphaPoint 
-     * @param mergeAlpha 
+     * @param {Bitmap} source 源
+     * @param {Rectangle} sourceRect 源矩形
+     * @param {Point} destPoint 偏移
+     * @param {Bitmap} alphaBitmap Alpha通道信息源
+     * @param {Point} alphaPoint Alpha通道偏移
+     * @param {Boolean} mergeAlpha 是否合并Alpha通道
      */
     copyPixels(source: Bitmap, sourceRect?: Rectangle, destPoint?: Point, alphaBitmap?: Bitmap, alphaPoint?: Point, mergeAlpha?: boolean) {
         if (!sourceRect) sourceRect = source.rect;
         if (!destPoint) destPoint = new Point();
+        let execAlpha = !!alphaBitmap;
+        if (execAlpha) {
+            alphaPoint = alphaPoint ?? Point.EMPTY;
+            if (mergeAlpha == undefined) mergeAlpha = false;
+        }
         for (let y = sourceRect.top; y < sourceRect.bottom; y++) {
             for (let x = sourceRect.left; x < sourceRect.right; x++) {
                 let color = source.getPixel32(x, y);
                 if (!color) continue;
+                if (execAlpha) {
+                    let alphaColor = alphaBitmap.getPixel32(x + alphaPoint.x, y + alphaPoint.y);
+                    if (alphaColor) {
+                        mergeAlpha ? color.a = Math.max(0, Math.min(255, color.a + alphaColor.a)) : color.a = alphaColor.a;
+                    }
+                }
                 this.setPixel32(x + destPoint.x, y + destPoint.y, color);
             }
         }
-    };
-
-    /**
-     * 放置图像
-     * @param source 源图像
-     * @param sourceRect 源图像矩形
-     * @param destPoint 偏移点
-     * @param padding 间隙
-     * @param pixeledge 像素边缘扩展
-     */
-    putPixelsTo(source: Bitmap, sourceRect: Rectangle, destPoint: Point, padding: number, pixeledge: number) {
-        let dstx = destPoint.x + padding;
-        let dsty = destPoint.y + padding;
-        let bottom = sourceRect.y + sourceRect.height + pixeledge * 2;
-        let right = sourceRect.x + sourceRect.width + pixeledge * 2;
-        for (let y = sourceRect.y; y < bottom; y++) {
-            // if (Math.abs(rect.y - y) < padding || Math.abs(rect.bottom - y) <= padding) continue;
-            let ty = Math.min(Math.max(sourceRect.y, y - pixeledge), sourceRect.y + sourceRect.height - 1);
-            // let ty = y;
-            for (let x = sourceRect.x; x < right; x++) {
-                // if (Math.abs(rect.x - x) < padding || Math.abs(rect.right - x) <= padding) continue;
-                let tx = Math.min(Math.max(sourceRect.x, x - pixeledge), sourceRect.x + sourceRect.width - 1);
-                // let tx = x;
-                this.setPixel32(
-                    x - sourceRect.x + dstx,
-                    y - sourceRect.y + dsty,
-                    source.getPixel32(tx, ty));
-            }
-        }
+        return this;
     }
 
     /**
@@ -561,6 +546,7 @@ export class Bitmap extends PNG {
      */
     blend(target: Bitmap, blendMode: BlendMode, dest?: Point) {
         blendModeApply.exec(this, target, blendMode, dest);
+        return this;
     }
 
     // /**
@@ -590,6 +576,7 @@ export class Bitmap extends PNG {
                 this.setPixel32(x, y, color);
             }
         }
+        return this;
     }
 
     /**
@@ -607,6 +594,7 @@ export class Bitmap extends PNG {
                 this.setPixel32(x1, y1, color);
             }
         }
+        return this;
     }
 
     private rand: PRNG;
@@ -647,14 +635,12 @@ export class Bitmap extends PNG {
                     cr = cg = cb = gray;
                 }
 
-                data[pos + 0] = (channelOptions & redChannel) ? (1 * cr) :
-                    0x00;
-                data[pos + 1] = (channelOptions & greenChannel) ? (1 * cg) :
-                    0x00;
-                data[pos + 2] = (channelOptions & blueChannel) ? (1 * cb) :
-                    0x00;
+                data[pos + 0] = (channelOptions & redChannel) ? (1 * cr) : 0x00;
+                data[pos + 1] = (channelOptions & greenChannel) ? (1 * cg) : 0x00;
+                data[pos + 2] = (channelOptions & blueChannel) ? (1 * cb) : 0x00;
             }
         }
+        return this;
     }
 
     /**
@@ -678,8 +664,8 @@ export class Bitmap extends PNG {
             (source.height - sourceRect.height - destPoint.y) :
             sourceRect.height;
 
-        let sourceData = source.data;
-        let sourcePos, destPos, sourceHex;
+        let sourceData: Buffer = source.data;
+        let sourcePos: number;
         let r, g, b, a, pos;
 
         let sx = sourceRect.x;
@@ -712,6 +698,7 @@ export class Bitmap extends PNG {
                 if (hasAlpha) data[pos + 3] = alphaArray[a];
             }
         }
+        return this;
     }
 
     /**
@@ -726,7 +713,8 @@ export class Bitmap extends PNG {
             blurArr.push(0o0 << 24 | 0 << 16 | i << 8 | 0o0);
             greenArr.push(0o0 << 24 | 0 << 16 | 0 << 8 | i);
         }
-        this.paletteMap(this, this.rect, new Point(), redArr, blurArr, greenArr);
+        this.paletteMap(this, this.rect, Point.EMPTY, redArr, blurArr, greenArr);
+        return this;
     }
 
     private simplexR: SimplexNoise;
@@ -797,6 +785,7 @@ export class Bitmap extends PNG {
                 data[pos + 2] = cb;
             }
         }
+        return this;
     }
 
     /**
@@ -805,7 +794,7 @@ export class Bitmap extends PNG {
      * @param {String} path 
      */
     async save(path: string) {
-        return fs.writeFileSync(path, await this.packToBuffer());
+        this.pack().pipe(fs.createWriteStream(path));
     }
 
     /**
@@ -813,7 +802,7 @@ export class Bitmap extends PNG {
      * @returns 
      */
     async toDataURL() {
-        return `data:image/png;base64,${await this.toBase64()}`
+        return `data:image/png;base64,${await this.toBase64()}`;
     }
 
     /**
@@ -847,24 +836,19 @@ export class Bitmap extends PNG {
      * @returns 
      */
     async toBase64() {
-        return Util.encodeBase64Image(await this.packToBuffer());
+        return Util.encodeBase64Image(await this.getBuffer());
     }
 
-    private __bufffer: Buffer;
     /**
      * 打包成Buffer
      * @returns 
      */
-    packToBuffer() {
+    getBuffer() {
         return new Promise<Buffer>(reslove => {
-            if (!!this.__bufffer) {
-                reslove(this.__bufffer);
-                return;
-            }
             let chunks = [];
             let size = 0;
             // 可写流实例
-            const myWritable = new Writable({
+            const writable = new Writable({
                 write(chunk, encoding, callback) {
                     chunks.push(chunk);
                     size += chunk.length;
@@ -874,12 +858,10 @@ export class Bitmap extends PNG {
             // myWritable.on('pipe',  ()=> {
             //     console.log("pipe");
             // })
-            myWritable.on('finish', () => {
-                // console.log("finish");
-                this.__bufffer = Buffer.concat(chunks, size)
-                reslove(this.__bufffer);
+            writable.on('finish', () => {
+                reslove(Buffer.concat(chunks, size));
             });
-            this.pack().pipe(myWritable);
+            this.pack().pipe(writable);
         })
     }
 }
