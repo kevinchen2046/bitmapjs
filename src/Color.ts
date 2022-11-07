@@ -1,8 +1,15 @@
-import { Util } from "./Util";
+import { ColorUtil } from "./ColorUtil";
 
 let __pool: Color[] = [];
 
-export class Color {
+export interface IColor {
+    r: number;
+    g: number;
+    b: number;
+    a?: number;
+}
+
+export class Color implements IColor {
     public r: number;
     public g: number;
     public b: number;
@@ -11,11 +18,21 @@ export class Color {
         this.reset(r, g, b, a)
     }
 
+    parse32(hex: number) {
+        let { a, r, g, b } = ColorUtil.extract32(hex);
+        this.r = r;
+        this.g = g;
+        this.b = b;
+        this.a = a;
+        return this;
+    }
+
     parse(hex: number) {
-        this.r = ((hex & 0x00ff0000) >> 16);
-        this.g = ((hex & 0x0000ff00)) >> 8;
-        this.b = ((hex & 0x000000ff));
-        this.a = ((hex >> 24) & 0xff);
+        let { r, g, b } = ColorUtil.extract(hex);
+        this.r = r;
+        this.g = g;
+        this.b = b;
+        this.a = 0xFF;
         return this;
     }
 
@@ -27,22 +44,44 @@ export class Color {
         return this;
     }
 
-    toHex() {
-        return Util.RGBToHex32(this);
+    toNumber() {
+        return ColorUtil.mergeFrom(this);
     }
 
-    static from(r?: number, g?: number, b?: number, a?: number) {
+    toNumber32() {
+        return ColorUtil.mergeFrom32(this);
+    }
+
+    recorver(){
+        this.reset();
+        Color.recorver(this);
+    }
+
+    static fromRBG(r?: number, g?: number, b?: number, a?: number) {
         if (__pool.length) {
             return __pool.pop().reset(r, g, b, a);
         }
         return new Color(r, g, b, a);
     }
 
-    static fromHex(hex: number) {
+    static from32(color: number) {
         if (__pool.length) {
-            return __pool.pop().parse(hex);
+            return __pool.pop().parse32(color);
         }
-        return new Color().parse(hex);
+        return new Color().parse32(color);
+    }
+
+    static from(color?: number) {
+        if (color == undefined) {
+            if (__pool.length) {
+                return __pool.pop();
+            }
+            return new Color();
+        }
+        if (__pool.length) {
+            return __pool.pop().parse(color);
+        }
+        return new Color().parse(color);
     }
 
     static recorver(color: Color) {

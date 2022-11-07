@@ -1,12 +1,5 @@
 'use strict';
 
-/**
- * The Point object represents a location in a two-dimensional coordinate
- * system, where x represents the horizontal axis and y represents the
- * vertical axis.
- * @constructor
- * @author Leandro Ferreira
- */
 export class Point {
     private static __empty: Point;
     public static get EMPTY() {

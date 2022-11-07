@@ -1,5 +1,6 @@
 import { Bitmap } from "./Bitmap";
 import { Color } from "./Color";
+import { Point } from "./Point";
 
 export enum BlendMode {
     ADD = "add",
@@ -21,7 +22,7 @@ export enum BlendMode {
 
 const halfColorMax = 0.00784313725;
 
-export class BlendModeApply {
+class BlendModeApply {
     private __methods: { [key: string]: (pixelSource: Color, pixelTarget: Color) => Color };
     constructor() {
         this.__methods = {};
@@ -93,16 +94,20 @@ export class BlendModeApply {
         }
     }
 
-    exec(source: Bitmap, target: Bitmap, blendMode: BlendMode) {
+    exec(source: Bitmap, target: Bitmap, blendMode: BlendMode, dest?: Point) {
         let exec = this.__methods[blendMode];
         if (!!exec) {
-            let defaultColor = Color.from();
-            source.colorForEach((color, x, y) => {
-                let targetColor = target.getPixel(x, y);
+            let defaultColor = Color.fromRBG();
+            let dx = dest?.x ?? 0;
+            let dy = dest?.y ?? 0;
+            source.forEachPixels((color, x, y) => {
+                let targetColor = target.getPixel32(x + dx, y + dy);
                 if (!targetColor) targetColor = defaultColor;
                 let result = exec(color, targetColor);
-                source.setPixel(x, y, result);
+                source.setPixel32(x, y, result);
             });
         }
     }
 }
+
+export let blendModeApply = new BlendModeApply();

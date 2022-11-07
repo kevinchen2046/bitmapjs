@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.BlendModeApply = exports.BlendMode = void 0;
+exports.blendModeApply = exports.BlendMode = void 0;
 const Color_1 = require("./Color");
 var BlendMode;
 (function (BlendMode) {
@@ -97,18 +97,21 @@ class BlendModeApply {
             return source;
         };
     }
-    exec(source, target, blendMode) {
+    exec(source, target, blendMode, dest) {
+        var _a, _b;
         let exec = this.__methods[blendMode];
         if (!!exec) {
-            let defaultColor = Color_1.Color.from();
-            source.colorForEach((color, x, y) => {
-                let targetColor = target.getPixel(x, y);
+            let defaultColor = Color_1.Color.fromRBG();
+            let dx = (_a = dest === null || dest === void 0 ? void 0 : dest.x) !== null && _a !== void 0 ? _a : 0;
+            let dy = (_b = dest === null || dest === void 0 ? void 0 : dest.y) !== null && _b !== void 0 ? _b : 0;
+            source.forEachPixels((color, x, y) => {
+                let targetColor = target.getPixel32(x + dx, y + dy);
                 if (!targetColor)
                     targetColor = defaultColor;
                 let result = exec(color, targetColor);
-                source.setPixel(x, y, result);
+                source.setPixel32(x, y, result);
             });
         }
     }
 }
-exports.BlendModeApply = BlendModeApply;
+exports.blendModeApply = new BlendModeApply();

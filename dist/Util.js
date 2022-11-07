@@ -66,31 +66,6 @@ class Util {
     static angleToRadian(angle) {
         return Math.PI * angle / 180.0;
     }
-    // RGB <-> Hex conversion
-    static hexToRGB(hex) {
-        return {
-            r: ((hex & 0xff0000) >> 16), g: ((hex & 0x00ff00) >> 8),
-            b: ((hex & 0x0000ff))
-        };
-    }
-    ;
-    static RGBToHex(rgb) {
-        return rgb.r << 16 | rgb.g << 8 | rgb.b;
-    }
-    ;
-    // ARGB <-> Hex conversion
-    static hexToRGB32(hex) {
-        return {
-            a: ((hex >> 24) & 0xff), r: ((hex & 0x00ff0000) >> 16),
-            g: ((hex & 0x0000ff00)) >> 8, b: ((hex & 0x000000ff))
-        };
-    }
-    ;
-    static RGBToHex32(argb) {
-        return ((argb.r << 16) | (argb.g << 8) | argb.b) + (argb.a * 256 * 256 * 256);
-        //return argb.r << 16 | argb.g << 16 | argb.b << 8 | argb.a;
-    }
-    ;
     // 256-value binary Vector struct
     static histogramVector(n) {
         var v = [];
