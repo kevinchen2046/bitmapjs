@@ -7,13 +7,29 @@ export class Util {
      * @param {String} path 
      * @param {...Bitmap[]} bitmaps 
      */
-    static async exportToHTML(path: string, ...bitmaps: Bitmap[]) {
+    static async exportToHTML(path: string, ...buffers: Buffer[]) {
         var coontent = `<head></head>\r\n<body>\r\n`;
-        for (var bitmap of bitmaps) {
-            coontent += `<img src="${await bitmap.toDataURL()}" />\r\n`;
+        for (var buffer of buffers) {
+            coontent += `<img src="${this.toDataURL(buffer)}" />\r\n`;
         }
         coontent += `</body>`
         fs.writeFileSync(path, coontent, 'utf-8');
+    }
+
+    /**
+    * 转换成Base64编码
+    * @returns 
+    */
+    static toBase64(buffer: Buffer) {
+        return Util.encodeBase64Image(buffer);
+    }
+
+    /**
+    * 转换成DataURL
+    * @returns 
+    */
+    static toDataURL(buffer: Buffer) {
+        return `data:image/png;base64,${this.toBase64(buffer)}`;
     }
 
     static encodeBase64Image(data: Uint8Array) {

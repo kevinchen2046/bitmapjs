@@ -478,6 +478,8 @@ class Bitmap extends pngjs_1.PNG {
         for (let y = 0; y < sourceRect.height; y++) {
             for (let x = 0; x < sourceRect.width; x++) {
                 sourceColor = source.getPixel32(sourceRect.x + x, sourceRect.y + y);
+                if (!sourceColor)
+                    continue;
                 switch (fromChannel) {
                     case BitmapChannel_1.BitmapChannel.RED:
                         channelValue = sourceColor.r;
@@ -492,6 +494,7 @@ class Bitmap extends pngjs_1.PNG {
                         channelValue = sourceColor.a;
                         break;
                 }
+                sourceColor.recorver();
                 // redundancy
                 let color = this.getPixel32(destPoint.x + x, destPoint.y + y);
                 if (!color)
@@ -511,6 +514,7 @@ class Bitmap extends pngjs_1.PNG {
                         break;
                 }
                 this.setPixel32(destPoint.x + x, destPoint.y + y, color);
+                color.recorver();
             }
         }
         return this;
@@ -775,16 +779,14 @@ class Bitmap extends pngjs_1.PNG {
      */
     save(path) {
         return __awaiter(this, void 0, void 0, function* () {
-            this.pack().pipe(fs.createWriteStream(path));
+            let buffer = yield this.getBuffer();
+            fs.writeFileSync(path, buffer);
+            return buffer;
         });
     }
-    /**
-     * 转换成DataURL
-     * @returns
-     */
-    toDataURL() {
+    writeFile(path) {
         return __awaiter(this, void 0, void 0, function* () {
-            return `data:image/png;base64,${yield this.toBase64()}`;
+            this.pack().pipe(fs.createWriteStream(path));
         });
     }
     /**
@@ -818,7 +820,7 @@ class Bitmap extends pngjs_1.PNG {
      */
     toBase64() {
         return __awaiter(this, void 0, void 0, function* () {
-            return Util_1.Util.encodeBase64Image(yield this.getBuffer());
+            return Util_1.Util.toBase64(yield this.getBuffer());
         });
     }
     /**

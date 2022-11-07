@@ -17,15 +17,29 @@ class Util {
      * @param {String} path
      * @param {...Bitmap[]} bitmaps
      */
-    static exportToHTML(path, ...bitmaps) {
+    static exportToHTML(path, ...buffers) {
         return __awaiter(this, void 0, void 0, function* () {
             var coontent = `<head></head>\r\n<body>\r\n`;
-            for (var bitmap of bitmaps) {
-                coontent += `<img src="${yield bitmap.toDataURL()}" />\r\n`;
+            for (var buffer of buffers) {
+                coontent += `<img src="${this.toDataURL(buffer)}" />\r\n`;
             }
             coontent += `</body>`;
             fs.writeFileSync(path, coontent, 'utf-8');
         });
+    }
+    /**
+    * 转换成Base64编码
+    * @returns
+    */
+    static toBase64(buffer) {
+        return Util.encodeBase64Image(buffer);
+    }
+    /**
+    * 转换成DataURL
+    * @returns
+    */
+    static toDataURL(buffer) {
+        return `data:image/png;base64,${this.toBase64(buffer)}`;
     }
     static encodeBase64Image(data) {
         return Buffer.from(data).toString("base64");

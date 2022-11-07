@@ -483,13 +483,14 @@ export class Bitmap extends PNG {
         for (let y = 0; y < sourceRect.height; y++) {
             for (let x = 0; x < sourceRect.width; x++) {
                 sourceColor = source.getPixel32(sourceRect.x + x, sourceRect.y + y);
+                if(!sourceColor) continue;
                 switch (fromChannel) {
                     case BitmapChannel.RED: channelValue = sourceColor.r; break;
                     case BitmapChannel.GREEN: channelValue = sourceColor.g; break;
                     case BitmapChannel.BLUE: channelValue = sourceColor.b; break;
                     case BitmapChannel.ALPHA: channelValue = sourceColor.a; break;
                 }
-
+                sourceColor.recorver();
                 // redundancy
                 let color = this.getPixel32(destPoint.x + x, destPoint.y + y);
                 if (!color) continue;
@@ -500,6 +501,7 @@ export class Bitmap extends PNG {
                     case BitmapChannel.ALPHA: color.a = channelValue; break;
                 }
                 this.setPixel32(destPoint.x + x, destPoint.y + y, color);
+                color.recorver();
             }
         }
         return this;
@@ -794,15 +796,13 @@ export class Bitmap extends PNG {
      * @param {String} path 
      */
     async save(path: string) {
-        this.pack().pipe(fs.createWriteStream(path));
+        let buffer = await this.getBuffer()
+        fs.writeFileSync(path, buffer);
+        return buffer;
     }
 
-    /**
-     * 转换成DataURL
-     * @returns 
-     */
-    async toDataURL() {
-        return `data:image/png;base64,${await this.toBase64()}`;
+    async writeFile(path: string) {
+        this.pack().pipe(fs.createWriteStream(path));
     }
 
     /**
@@ -836,7 +836,7 @@ export class Bitmap extends PNG {
      * @returns 
      */
     async toBase64() {
-        return Util.encodeBase64Image(await this.getBuffer());
+        return Util.toBase64(await this.getBuffer());
     }
 
     /**
@@ -859,6 +859,8 @@ export class Bitmap extends PNG {
             //     console.log("pipe");
             // })
             writable.on('finish', () => {
+                // console.log("finish");
+
                 reslove(Buffer.concat(chunks, size));
             });
             this.pack().pipe(writable);
